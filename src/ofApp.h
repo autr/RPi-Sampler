@@ -37,9 +37,8 @@ public:
     ofxOMXVideoGrabber vidGrabber;
 #else
     ofVideoGrabber vidGrabber;
-//    vector<ofPixels> frames;
 #endif
-    ofPixels videoInverted;
+    
     ofTexture videoTexture;
     int camWidth;
     int camHeight;

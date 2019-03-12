@@ -1,7 +1,6 @@
 #include "ofApp.h"
 
 void ofApp::setupPiCam() {
-    frameRate = 25;
 #ifdef TARGET_RASPBERRY_PI
     ofxOMXCameraSettings settings;
     
@@ -22,8 +21,6 @@ void ofApp::setupPiCam() {
     settings.autoISO = false;
     settings.autoShutter = false;
     
-    //pass in the settings and it will start the camera
-    
     ofLog() << "Setting up PiCam";
     vidGrabber.setup(settings);
     resize = 1;
@@ -33,6 +30,11 @@ void ofApp::setupPiCam() {
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    
+    frameRate = 25;
+    
+    ofSetFrameRate(frameRate);
+    
     camWidth = 640;  // try to grab at this size.
     camHeight = 480;
     resizeW = camWidth;
@@ -41,16 +43,11 @@ void ofApp::setup(){
 #ifndef TARGET_RASPBERRY_PI
     
     vidGrabber.setDeviceID(0);
-    vidGrabber.setDesiredFrameRate(60);
+    vidGrabber.setDesiredFrameRate(frameRate);
     vidGrabber.initGrabber(camWidth, camHeight);
     
 #endif
     
-
-    videoInverted.allocate(camWidth, camHeight, OF_PIXELS_RGB);
-    videoTexture.allocate(videoInverted);
-    
-    ofSetFrameRate(frameRate);
     
     maxSeconds = 99999.0;
     speed = 1.0;
@@ -87,25 +84,22 @@ void ofApp::appendPixels() {
     ofPixels pixels;
     int ww = vidGrabber.getWidth() ;
     int hh = vidGrabber.getHeight() ;
+    int rw = (float)ww * resize;
+    int rh = (float)hh * resize;
     
     
 #ifdef TARGET_RASPBERRY_PI
-//    ofImage img;
-//    img.setFromPixels(vidGrabber.getPixels(), vidGrabber.getWidth(), vidGrabber.getHeight(), OF_IMAGE_GRAYSCALE, true);
-//    pixels = img.getPixels();
-//    pixels.setFromPixels(vidGrabber.getRawPixels(), ww, hh, OF_IMAGE_GRAYSCALE);
-    int rw = (float)ww * resize;
-    int rh = (float)hh * resize;
-    pixels = vidGrabber.getPixels();
     
-//    ofLog() << "Pixels: " << frames.size() << " Width: " << rw << " Height: " << rh;
-    pixels.resize(rw, rh);
+    pixels = vidGrabber.getPixels();
     
 #else
     
     pixels.setFromPixels(vidGrabber.getPixels().getData(), ww, hh, 3);
     
 #endif
+    
+    pixels.resize(rw, rh);
+    
     if (frames.size() >= maxSeconds * ofGetFrameRate()) {
         frames.erase(frames.begin(), frames.begin() + 1);
     }
@@ -116,7 +110,6 @@ void ofApp::appendPixels() {
 //--------------------------------------------------------------
 void ofApp::draw(){
     
-//    ofLog() << "Frames: " << frames.size() << " Index: " << (int)frameIndex;
 #ifdef TARGET_RASPBERRY_PI
     if (vidGrabber.isReady()) vidGrabber.draw(0,0,ofGetWidth(), ofGetHeight());
 #else
@@ -134,30 +127,45 @@ void ofApp::draw(){
     
     if (frames.size() == 0) return;
     
-    videoTexture.loadData(frames[(int)frameIndex]);
-    videoTexture.draw(0,0,ofGetWidth(), ofGetHeight());
+    int ww = frames[(int)frameIndex].getWidth();
+    int hh = frames[(int)frameIndex].getHeight();
     
-//    for (int i = 0; i < frames.size(); i++) {
-//       int x =  ofRandom(0, ofGetWidth());
-//       int y = ofRandom(0, ofGetHeight());
-//            videoTexture.loadData(frames[i]);
-//            videoTexture.draw(x,y,120, 120);
-//
-//    }
     
+    
+    videoTexture.loadData(frames[(int)frameIndex].getData(), ww, hh, GL_RGB);
+    
+    /*
+        ofTexture can report wrong width when mixed with differently sized frames:
+        Scale to fit original pixels size
+     */
+    
+    int w = (videoTexture.getWidth() / ww) * ofGetWidth();
+    int h = (videoTexture.getHeight() / hh) * ofGetHeight();
+    
+    videoTexture.draw(0,0, w, h);
+
     if (isRecording) {
         ofSetColor(255,0,0);
-        ofDrawCircle(ofGetWidth()/2, ofGetHeight()/2, 20);
+        ofDrawCircle(100, 100, 20);
     }
     
-    
-#ifdef TARGET_RASPBERRY_PI
     if (ofGetElapsedTimef() - memoryTimestamp > 2) {
-        ofLog() << ofSystem("free -h");
-        ofLog() << "Time elapsed recording: " << ofGetElapsedTimef() - measureTimestamp;
+        string msg;
+#ifdef TARGET_RASPBERRY_PI
+        msg = ofSystem("free -h");
+#endif
+    
+#ifdef TARGET_OSX
+        string cmd = "./data/report-osx.sh";
+        cmd = "${PWD}/../../../data/report-osx.sh";
+        msg = ofSystem(cmd);
+    
+#endif
+        float time = ofGetElapsedTimef() - measureTimestamp;
+        ofLog() << "[TIME] " << time;
+        ofLog() << "[MEMORY] \n" << msg;
         memoryTimestamp = ofGetElapsedTimef();
     }
-#endif
 }
 
 
@@ -168,6 +176,9 @@ void ofApp::keyPressed(int key){
         isRecording = !isRecording;
         measureTimestamp = ofGetElapsedTimef();
     }
+    if (key == 'c') {
+        frames.clear();
+    }
     if (key == OF_KEY_RIGHT) {
         if (speed < 0) speed *= -1;
     }
@@ -175,12 +186,14 @@ void ofApp::keyPressed(int key){
         if (speed > 0) speed *= -1;
     }
     if (key == OF_KEY_UP) {
-        if (resize != 1) resize += 0.25;
-        ofLog() << "Resizing to: " << resize;
+        resize += 0.25;
+        if (resize > 1) resize = 1;
+        ofLog() << "[RESIZE] " << camWidth * resize << " x " << camHeight * resize;
     }
     if (key == OF_KEY_DOWN) {
-        if (resize != 0.25) resize -= 0.25;
-        ofLog() << "Resizing to: " << resize;
+        resize -= 0.25;
+        if (resize < 0.25) resize = 0.25;
+        ofLog() << "[RESIZE] " << camWidth * resize << " x " <<camHeight * resize;
     }
     if(isdigit(key)) {
         float direction = (speed < 0) ? -2 : 2;
@@ -197,7 +210,7 @@ void ofApp::keyReleased(int key){
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y){
-//    speed = ofMap(x, 0, ofGetWidth(), -4, 4);
+    
 }
 
 //--------------------------------------------------------------
