@@ -6,3 +6,4 @@ openFrameworks-Info.plist
 Project.xcconfig
 .DS_Store
 rpi-video-sampler.xcodeproj
+obj
