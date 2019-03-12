@@ -1,28 +1,23 @@
-# videoGrabberExample
+# Raspberry Pi 
 
-![Screenshot of videoGrabberExample](videoGrabberExample.png)
+Proof-of-concept RAM video sampler made over a few beers with @langolierz 🍻
 
-### Learning Objectives
+* Records pixel buffers from CSI Camera to memory
+* Can be played in reverse, sped up, slowed down
+* Maximum ~30 seconds with NTSE (640 x 480) in RGB24, when GPU split set to 128MB
+* RPi crashes / runs out of memory at < 200MB
 
-This openFrameworks example is designed to demonstrate how to access the webcam.
+**Controls**
 
-Studying this example will help you understand:
+* Spacebar to open CSI Camera
+* R key to toggle recording frames
+* C to clear recorded frames
+* < Left and Right > keys to set forwards or backwards
+* 1 - 9 keys to set speed
+* Up and Down keys to change capture resolution
 
-* how to print a list of available webcam devices (``ofVideoDevice``)
-* how to initiate ``ofVideoGrabber``
-* how to allocate memory on your graphics card for an ``ofTexture`` or for ``ofPixels``
-* how to iterate through a webcam frame's pixels (by accessing its ``ofPixels``)
-* how to manipulate the webcam image / how to invert an image
+**Installation**
 
+Raspberry Pi 3 with Raspbian Stretch, installed OF 0.10.1 dependencies
 
-### Expected Behavior
-
-If your computer has a webcam, you should be able to see the webcam image when launching this app on the left and an inverted version of the webcam stream on the right.
-
-### Classes used in this example
-
-This example uses the following classes: 
-
-* ``ofVideoGrabber``
-* ``ofPixels``
-* ``ofTexture``
+[Cross-compiling guide Armv6l](https://github.com/autr/pi/blob/master/of-cross-compile-guide.md)

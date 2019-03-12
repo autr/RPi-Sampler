@@ -1,0 +1,8 @@
+bin/rpi-video-sampler
+rpi-video-samplerDebug.app
+rpi-video-samplerRelease.app
+rpi-video-sampler.app
+openFrameworks-Info.plist
+Project.xcconfig
+.DS_Store
+rpi-video-sampler.xcodeproj
