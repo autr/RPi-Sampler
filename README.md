@@ -1,11 +1,11 @@
-# Raspberry Pi 
+# Raspberry Pi Frame Sampler
 
-Proof-of-concept RAM video sampler made over a few beers with @langolierz 🍻
+Proof-of-concept video sampler made over a few beers with @langolierz 🍻
 
-* Records pixel buffers from CSI Camera to memory
-* Can be played in reverse, sped up, slowed down
-* Maximum ~30 seconds with NTSE (640 x 480) in RGB24, when GPU split set to 128MB
-* RPi crashes / runs out of memory at < 200MB
+* Records pixel buffers from CSI Camera into RAM memory (`vector<ofPixel>`)
+* Playback can be reversed, sped up, slowed down
+* Max ~30 seconds with NTSE (640 x 480) in RGB24, when GPU split set to 128MB
+* Crashes / runs out of memory at < 200MB
 
 **Controls**
 
