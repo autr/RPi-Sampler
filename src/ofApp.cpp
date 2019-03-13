@@ -1,13 +1,31 @@
 #include "ofApp.h"
 
+void ofApp::setupRecorder() {
+    
+    recorder.setVideoCodec("mpeg"); // 'ljpeg', 'jpeg2000' etc
+//    recorder.setVideoBitrate("800k");
+    
+    ofAddListener(recorder.outputFileCompleteEvent, this, &ofApp::recordingComplete);
+    
+    soundStream.setup(this, 0, 2, 44100, 256, 4);
+    
+}
+
+void ofApp::recordingComplete(ofxVideoRecorderOutputFileCompleteEventArgs& args){
+    cout << "The recoded video file is now complete." << endl;
+}
+
+void ofApp::exit(){
+    ofRemoveListener(recorder.outputFileCompleteEvent, this, &ofApp::recordingComplete);
+    recorder.close();
+}
+
 void ofApp::setupPiCam() {
 #ifdef TARGET_RASPBERRY_PI
     ofxOMXCameraSettings settings;
     
     settings.sensorWidth = camWidth; //default 1280
     settings.sensorHeight = camHeight; //default 720
-    //    settings.drawCropRectangle.set(0,0,0,0);
-    //    settings.sensorCropRectangle.set(0,0,736,576);
     settings.enableTexture = true; //default true
     settings.enableExtraVideoFilter = false;
     
@@ -25,6 +43,8 @@ void ofApp::setupPiCam() {
     vidGrabber.setup(settings);
     resize = 1;
     
+    
+    
 #endif
 }
 
@@ -34,6 +54,8 @@ void ofApp::setup(){
     frameRate = 25;
     
     ofSetFrameRate(frameRate);
+    
+    bufferOrMpeg = false;
     
     camWidth = 640;  // try to grab at this size.
     camHeight = 480;
@@ -53,6 +75,15 @@ void ofApp::setup(){
     speed = 1.0;
     timeStamp = 0;
     memoryTimestamp = 0;
+    
+    
+    if (recorder.hasVideoError()) {
+        ofLogWarning("The video recorder failed to write some frames!");
+    }
+    
+    if (recorder.hasAudioError()) {
+        ofLogWarning("The video recorder failed to write some audio samples!");
+    }
 }
 
 
@@ -64,22 +95,31 @@ void ofApp::update(){
 #ifdef TARGET_RASPBERRY_PI
 
     
-    if (ofGetElapsedTimef() - timeStamp >= (1.0/frameRate)) {
+    if (ofGetElapsedTimef() - timeStamp >= (1.0/frameRate) && (isRecording)) {
         
-        if (isRecording) appendPixels();
+        appendPixels();
         timeStamp = ofGetElapsedTimef();
     }
     
 #else
     
     vidGrabber.update();
-    if(vidGrabber.isFrameNew() && isRecording) appendPixels();
+    if(vidGrabber.isFrameNew() && isRecording) {
+        (bufferOrMpeg) ? appendBufferPixels() : appendRecorderFrame();
+    }
     
 #endif
     
 }
 
-void ofApp::appendPixels() {
+void ofApp::appendRecorderFrame() {
+    bool success = recorder.addFrame(vidGrabber.getPixels());
+    if (!success) {
+        ofLogWarning("This frame was not added!");
+    }
+}
+
+void ofApp::appendBufferPixels() {
     
     ofPixels pixels;
     int ww = vidGrabber.getWidth() ;
@@ -149,7 +189,7 @@ void ofApp::draw(){
         ofDrawCircle(100, 100, 20);
     }
     
-    if (ofGetElapsedTimef() - memoryTimestamp > 2) {
+    if ((ofGetElapsedTimef() - memoryTimestamp > 2)&&(isRecording)) {
         string msg;
 #ifdef TARGET_RASPBERRY_PI
         msg = ofSystem("free -h");
@@ -172,9 +212,29 @@ void ofApp::draw(){
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
 
+    if (key == 'b') {
+        bufferOrMpeg = !bufferOrMpeg;
+        
+        if (!bufferOrMpeg) ofLog() << "[MODE] Record to Disk";
+        if (bufferOrMpeg) ofLog() << "[MODE] Record to RAM";
+    }
+    
     if (key == 'r') {
         isRecording = !isRecording;
         measureTimestamp = ofGetElapsedTimef();
+        
+        if (!bufferOrMpeg) {
+        
+            if(isRecording && !recorder.isInitialized()) {
+                ofLog() << "[RECORDER] Recording Video";
+                recorder.setup("video-sampler"+ofGetTimestampString()+".mov", vidGrabber.getWidth(), vidGrabber.getHeight(), frameRate);
+                recorder.start();
+            }
+            if (!isRecording && recorder.isInitialized()) {
+                ofLog() << "[RECORDER] Saving Video";
+                recorder.close();
+            }
+        }
     }
     if (key == 'c') {
         frames.clear();

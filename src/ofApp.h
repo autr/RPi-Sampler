@@ -2,14 +2,12 @@
 
 #include "ofMain.h"
 
-// This openFrameworks example is designed to demonstrate how to access the
-// webcam.
-//
-// For more information regarding this example take a look at the README.md.
-
 #ifdef TARGET_RASPBERRY_PI
 #include "ofxOMXVideoGrabber.h"
 #endif
+
+//#include "ofxPoco.h"
+#include "ofxVideoRecorder.h"
 
 class ofApp : public ofBaseApp{
 
@@ -30,14 +28,19 @@ public:
     void windowResized(int w, int h);
     void dragEvent(ofDragInfo dragInfo);
     void gotMessage(ofMessage msg);
-    void appendPixels();
+    void appendBufferPixels();
+    void appendRecorderFrame();
     void setupPiCam();
+    void setupRecorder();
+    void recordingComplete(ofxVideoRecorderOutputFileCompleteEventArgs& args);
+    void exit();
 
 #ifdef TARGET_RASPBERRY_PI
     ofxOMXVideoGrabber vidGrabber;
 #else
     ofVideoGrabber vidGrabber;
 #endif
+    ofxVideoRecorder recorder;
     
     ofTexture videoTexture;
     int camWidth;
@@ -55,4 +58,9 @@ public:
     float resize;
     
     float timeStamp, memoryTimestamp, measureTimestamp;
+    
+    bool bufferOrMpeg;
+    
+    
+    ofSoundStream soundStream;
 };
